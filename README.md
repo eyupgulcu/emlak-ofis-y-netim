@@ -1,63 +1,53 @@
-# LeadHane — Real Estate Office CRM
+# LeadHane: Real Estate Office CRM
 
-A multi-tenant SaaS for small, independent real estate offices: a listing website plus a lead CRM, with AI property matching and WhatsApp automation built in. Leads stop getting lost in WhatsApp chats — every enquiry lands in a pipeline, gets a broker, and gets followed up automatically.
+LeadHane is a CRM and listing website for small real estate offices. A lot of small offices in Turkey still keep track of buyers in WhatsApp chats, and leads go cold when nobody follows up. With LeadHane every enquiry goes into a pipeline, gets assigned to a broker, and gets followed up even when nobody remembers to.
 
-> UI language is Turkish (built for the Turkish market). Code and docs are in English.
+The interface is in Turkish because the product is for the Turkish market. The code and these docs are in English.
 
-## What it does
+## Features
 
-**Public website**
-- Listing catalogue with search filters, listing detail pages and photo gallery
-- Team (broker) page and contact page
-- Lead capture forms and one-tap WhatsApp contact on every listing
+The public site has a listing catalogue with filters, a page for each listing with a photo gallery, a team page, a contact page, and a WhatsApp button on every listing. Enquiry forms create a lead directly in the CRM.
 
-**Agent panel (`/admin`)**
-- **Lead pipeline** — drag-and-drop Kanban board by stage, lead scoring, follow-up dates, full interaction history
-- **AI property matching** — Claude reads a lead's profile (sale/rent, district, budget, rooms) and ranks the active listings that fit, returning a reason and a score for each match
-- **AI lead summary** — one click turns a long interaction history into a short brief before a call
-- **Listings management** — create, edit, publish; bulk import with a dry-run preview
-- **Team & roles** — admin / broker / intern roles, enforced on every API route
-- **Reports** — pipeline and performance overview
+Inside the agent panel (`/admin`) brokers work from a Kanban pipeline. Each lead has a stage, a score, a follow-up date and a full history of calls and messages.
 
-**Automations (Vercel Cron)**
-- **Daily hotsheet** — every working morning each broker gets a WhatsApp summary of today's follow-ups and new leads
-- **Action plans** — multi-step follow-up sequences (WhatsApp / call / email / task) that run day by day for each lead
-- **Instant lead alert** — a new lead is pushed to the responsible broker's WhatsApp within seconds
+Two features use Claude:
 
-**SaaS layer**
-- Self-serve office sign-up with multi-step onboarding
-- Plans with server-side limits (brokers per office, leads per month) and an upgrade path in the UI
+- Property matching. Claude reads what the buyer wants (sale or rent, district, budget, number of rooms) and picks the active listings that fit, with a short reason and a score for each one.
+- Lead summaries. A broker can turn a long conversation history into a few lines before calling someone back.
 
-## Architecture
+Listings can be added one by one or imported in bulk with a dry run first. Offices can have several users with admin, broker or intern roles, and the roles are checked on the server for every API call.
+
+Two jobs run on Vercel Cron:
+
+- Every working morning each broker gets a WhatsApp message with the day's follow-ups and the new leads.
+- Follow-up plans send WhatsApp messages, create call reminders or tasks on the right day for each lead.
+
+New leads are also pushed to the assigned broker on WhatsApp as soon as they come in.
+
+Offices sign up on their own. Each plan has a limit on brokers and monthly leads, enforced on the server, and the UI links to an upgrade when a limit is reached.
+
+## How it's put together
 
 ```
-Next.js 15 (App Router) ──► Supabase (Auth + Postgres)
-        │
-        ├── Anthropic Claude ── property matching (Sonnet), lead summaries (Haiku)
-        ├── Evolution API ───── WhatsApp messages
-        ├── Vercel Cron ─────── daily hotsheet, action plans
-        └── Vercel Blob ─────── listing photos
+Next.js 15 (App Router) -> Supabase (Auth + Postgres)
+   Claude API     property matching (Sonnet), lead summaries (Haiku)
+   Evolution API  WhatsApp messages
+   Vercel Cron    morning summary, follow-up plans
+   Vercel Blob    listing photos
 ```
 
-- Tenant-scoped schema: `tenants`, `brokers`, `listings`, `leads`, `lead_interactions`, `action_plans`, `lead_action_logs`, `saved_filters`
-- Drizzle defines the schema and migrations; runtime queries go through one data-access module (`lib/db.ts`)
-- Zod validation and role checks on every API route, rate limiting on public endpoints
-- Broker creation rolls back the auth user if the database insert fails
+The schema is split by tenant: `tenants`, `brokers`, `listings`, `leads`, `lead_interactions`, `action_plans`, `lead_action_logs` and `saved_filters`. Drizzle holds the schema and migrations, and all queries go through `lib/db.ts`. API input is validated with Zod and public endpoints are rate limited. If creating a broker fails halfway, the auth user is deleted again so nothing is left behind.
 
-## Tech stack
+Stack: Next.js 15, TypeScript, Tailwind CSS v4, Supabase, Drizzle ORM, Zod, Claude API, Evolution API, Vercel.
 
-Next.js 15 · TypeScript · Tailwind CSS v4 · Supabase · Drizzle ORM · Zod · Anthropic Claude API · Evolution API (WhatsApp) · Vercel
-
-## Running locally
+## Running it locally
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in Supabase, Anthropic and WhatsApp keys
-npm run db:push              # apply the schema
+cp .env.example .env.local   # Supabase, Anthropic and WhatsApp keys
+npm run db:push              # create the tables
 npm run seed                 # optional demo data
 npm run dev                  # http://localhost:3000
 ```
 
-## Author
-
-Built by [Eyup Gulcu](https://github.com/eyupgulcu) · [Flovia Technologies](https://floviatech.com) — AI automation for small businesses.
+Made by [Eyup Gulcu](https://github.com/eyupgulcu) at [Flovia Technologies](https://floviatech.com).
